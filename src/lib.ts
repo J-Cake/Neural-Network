@@ -13,11 +13,13 @@ export default class Network {
 
     constructor(sizes: number[], activationFunctions: activations[], learningRate: number = 0.3, trainingSubset: number = 0) {
 
-        if (sizes.length === activationFunctions.length) {
-            this.layers = fill(sizes.length, (a: number, length: number, prev: Layer) =>
-                new Layer(sizes[a - 1], sizes[a], activationFunctions[a], prev, a));
+        if (sizes.length === activationFunctions.length + 1) {
+            this.layers = fill(sizes.length, (a: number, length: number, prev: Layer) => {
+                console.log(a);
+                return new Layer(sizes[a - 1], sizes[a], activationFunctions[a - 1], prev, a);
+            });
         } else
-            throw new SyntaxError(`There must be exactly one activation function per layer. ${sizes.length} are required.`);
+            throw new SyntaxError(`There must be exactly one activation function per layer. ${sizes.length - 1} are required.`);
 
         this.learningRate = learningRate;
         this.trainingSubset = trainingSubset;
@@ -151,10 +153,10 @@ class Layer {
     layerIndex: number;
 
     constructor(inputNeurons: number, outputNeurons: number, activationFunction: activations, prevLayer?: Layer, layerIndex: number = 0) {
-        this.activation = activationFunction.f;
-        this.activationPrime = activationFunction.fPrime;
-
         if (layerIndex !== 0) {
+            this.activation = activationFunction.f;
+            this.activationPrime = activationFunction.fPrime;
+
             this.weights = fill(outputNeurons, () => fill(inputNeurons, () => 2 * Network.random() - 1));
             this.biases = fill(outputNeurons, () => Network.random());
 

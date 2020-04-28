@@ -6,7 +6,7 @@ import {fill, sig, sigp} from "./utils";
 sourceMap.install();
 
 const layerSizes: number[] = [3, 2, 1];
-const activations = fill(3, () => ({f: sig, fPrime: sigp}));
+const activations = fill(layerSizes.length - 1, () => ({f: sig, fPrime: sigp}));
 
 const network = new Network(layerSizes, activations);
 
@@ -53,7 +53,7 @@ console.log();
 const startTime: Date = new Date();
 
 console.log("Initiating Training");
-console.log("Network Error:", network.train(trainingData, 1e10));
+console.log("Network Error:", network.train(trainingData, 1e4));
 
 console.log("Finished training in", new Date().getTime() - startTime.getTime() + "ms");
 

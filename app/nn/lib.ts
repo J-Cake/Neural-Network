@@ -1,7 +1,7 @@
 import * as sr from 'seedrandom';
-import {dot, dotVector, fill, transpose} from "./utils";
+import {dot, dotVector, fill, sig, sigp, transpose} from "./utils";
 
-type activations = { f: (x: number) => number, fPrime: (x: number) => number };
+export type activations = { f: (x: number) => number, fPrime: (x: number) => number };
 export type example = { inputs: number[], expected: number[] };
 
 export default class Network {
@@ -11,11 +11,11 @@ export default class Network {
 
     trainingSubset: number;
 
-    constructor(sizes: number[], activationFunctions: activations[], learningRate: number = 0.3, trainingSubset: number = 0) {
+    lastKnownError: number;
 
+    constructor(sizes: number[], activationFunctions: activations[], learningRate: number = 0.3, trainingSubset: number = 0) {
         if (sizes.length === activationFunctions.length + 1) {
             this.layers = fill(sizes.length, (a: number, length: number, prev: Layer) => {
-                console.log(a);
                 return new Layer(sizes[a - 1], sizes[a], activationFunctions[a - 1], prev, a);
             });
         } else
@@ -23,6 +23,7 @@ export default class Network {
 
         this.learningRate = learningRate;
         this.trainingSubset = trainingSubset;
+        this.lastKnownError = 0;
     }
 
     evaluate(inputs: number[]): number[] {
@@ -50,15 +51,15 @@ export default class Network {
         return errors;
     }
 
-    train(trainingSet: example[], confirm: number | ((error: number) => boolean)): number {
+    train(trainingSet: example[], onUpdate: (info: { error: number, iterations: number }) => boolean): number {
         let iterations: number = 0;
-
-        if (typeof confirm === "number")
-            for (let i = 0; i < confirm; i++)
-                this.backProp(trainingSet, this.learningRate, iterations++);
-        else
-            while (confirm(this.getAvgError(trainingSet)))
-                this.backProp(trainingSet, this.learningRate, iterations++);
+        //     for (let i = 0; i < confirm; i++)
+        //         if (onUpdate && onUpdate({error: this.lastKnownError, iterations}))
+        //             this.backProp(trainingSet, this.learningRate, iterations++);
+        // } else {
+        while (onUpdate({error: this.getAvgError(trainingSet), iterations}))
+            this.backProp(trainingSet, this.learningRate, iterations++);
+        // }
 
         return this.getAvgError(trainingSet);
     }
@@ -126,28 +127,28 @@ export default class Network {
                 avgErr += error;
         }
 
-        return avgErr / (examples[0].expected.length * examples.length);
+        return this.lastKnownError = avgErr / (examples[0].expected.length * examples.length);
 
     }
 
-    static random: sr = sr(1);
+    static random: sr.prng = sr('a');
 }
 
-class Layer {
-    weights: number[][];
-    biases: number[];
+export class Layer {
+    weights: number[][] = [];
+    biases: number[] = [];
 
-    private readonly weightChange: number[][];
-    private readonly biasChange: number[];
-    private weightUpdateCount: number;
-    private biasUpdateCount: number;
+    readonly weightChange: number[][] = [];
+    readonly biasChange: number[] = [];
+    weightUpdateCount: number = 0;
+    biasUpdateCount: number = 0;
 
-    activation: (x: number) => number;
-    activationPrime: (x: number) => number;
+    activation: (x: number) => number = sig;
+    activationPrime: (x: number) => number = sigp;
 
-    activations: number[];
+    activations: number[] = [];
 
-    prevLayer: Layer;
+    prevLayer: Layer = null as any as Layer;
 
     isInputLayer: boolean;
     layerIndex: number;

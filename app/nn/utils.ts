@@ -8,8 +8,8 @@ export const set = (array: number[], value: number[]): number[] => {
 export const fill = <T>(length: number, filler: (i: number, length: number, prev: T) => T): T[] => { // simple array preloading function. Don't worry about it. It works.
     const arr: T[] = [];
 
-    let prev: T = null;
-    for (var i = 0; i < length; i++)
+    let prev: T = null as any as T;
+    for (let i = 0; i < length; i++)
         arr.push(prev = filler(i, length, prev));
 
     return arr;

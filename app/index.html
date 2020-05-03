@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network GUI</title>
+
+    <link rel="stylesheet" href="./master.css"/>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+    </style>
+</head>
+<body>
+
+<section id="container">
+    <div id="tool-bar">
+        <button id="train-btn">Train</button>
+    </div>
+
+    <div id="training-data">
+        <div id="data-container">
+
+        </div>
+        <button id="add-example-btn">Add Example</button>
+    </div>
+
+    <div id="graph-container">
+        <div id="network-visualiser"></div>
+
+        <div id="error-graph"></div>
+    </div>
+</section>
+
+<!--suppress HtmlUnknownTarget -->
+<script src="./index.js">
+    // const src = require("./nn");
+</script>
+</body>
+</html>

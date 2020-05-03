@@ -1,11 +1,8 @@
 import * as sr from 'seedrandom';
-import * as sourceMap from 'source-map-support';
 
-import {fill, dot, sig, sigp, dotVector, transpose} from './utils';
+import {dot, dotVector, fill, sig, sigp, transpose} from './utils';
 
-sourceMap.install();
-
-const random: sr = sr(1);
+const random: sr.prng = sr('a');
 
 const learningRate: number = 0.3;
 
@@ -33,9 +30,7 @@ function forwardPropagate(inputs: number[]): number[] {
 
     const hla = dot(inputLayerWeights, inputs).map((i, a) => sig(i + inputLayerBiases[a]));
 
-    const ola = dot(hiddenLayerWeights, hla).map((i, a) => sig(i + hiddenLayerBiases[a]));
-
-    return ola;
+    return dot(hiddenLayerWeights, hla).map((i, a) => sig(i + hiddenLayerBiases[a]));
 }
 
 function backwardPropagate() {

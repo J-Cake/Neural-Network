@@ -5,7 +5,9 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "electron": "electron ./build/app/launch.js"
+        "electron": "gulp && electron ./build/app/launch.js",
+        "web": "gulp && node ./build/app/web.js",
+        "build": "gulp"
     },
     "keywords": [],
     "author": "",

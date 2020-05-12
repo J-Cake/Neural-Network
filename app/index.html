@@ -6,6 +6,10 @@
 
     <link rel="stylesheet" href="./master.css"/>
 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="icon" href="./icon.png"/>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
     </style>
@@ -14,26 +18,106 @@
 
 <section id="container">
     <div id="tool-bar">
+        <button id="config-btn" style="color: #eee">{./res/sliders.svg}</button>
         <button id="train-btn">Train</button>
+        <button id="eval-btn">Evaluate</button>
     </div>
+
+    <section id="config-box">
+        <form name="config" class="form">
+            <div>
+                <input type="number" name="trainingSubset" id="use-subset" min="0" placeholder="Samples to use per cycle"/>
+                <label for="use-subset">
+                    A Subset size for each training iteration.<br/><i>Leave blank to use all examples each
+                    time.</i></label>
+            </div>
+
+            <div>
+                <input type="number" name="learningRate" id="learning-rate" min="0" max="1" step="0.01"
+                       placeholder="Learning Speed (Speed over Precision)"/>
+                <label for="learning-rate">
+                    The speed at which the neural network learns.</label>
+            </div>
+
+            <div>
+                <input type="text" name="seed" id="init-seed" placeholder="Will be randomly generated if not provided."/>
+                <label for="init-seed">
+                    Initialisation Seed</label>
+            </div>
+
+            <div>
+                <input type="text" name="seed" id="rtp-num" placeholder="How many training cycles to perform"/>
+                <label for="rtp-num">
+                    Training Cycles</label>
+            </div>
+
+            <div>
+                <input type="text" name="seed" id="target-error" placeholder="Train until target error is reached"/>
+                <label for="rtp-num">
+                    Target Error</label>
+            </div>
+
+            <div id="layer-config">
+
+            </div>
+
+            <div class="form-controls">
+                <button type="submit" name="save-btn">Okay</button>
+                <input type="button" name="cancel-btn" value="Cancel" id="config-cancel-btn"/>
+                <input type="button" name="reset-btn" value="Reset"/>
+            </div>
+        </form>
+    </section>
+
+
+    <section id="feed-forward-prompt">
+
+    </section>
 
     <div id="training-data">
         <div id="data-container">
 
         </div>
-        <button id="add-example-btn">Add Example</button>
+        <div id="example-controls">
+            <button id="add-example-btn" class="round-btn">{./res/plus-circle.svg}</button>
+            <button id="clear-btn" class="round-btn">{./res/trash-2.svg}</button>
+        </div>
     </div>
+
+    <section id="add-example-prompt">
+
+    </section>
 
     <div id="graph-container">
         <div id="network-visualiser"></div>
 
-        <div id="error-graph"></div>
+        <div id="error-graph">
+            <div id="view-controls">
+                <div id="scroll-controls">
+                    <button id="left" class="round-btn">{./res/chevron-left.svg}</button>
+                    <button id="right" class="round-btn">{./res/chevron-right.svg}</button>
+                </div>
+                <div id="zoom-controls">
+                    <button aria-label="Zoom In" id="in" class="round-btn">{./res/zoom-in.svg}</button>
+                    <button aria-label="Zoom Out" id="out" class="round-btn">{./res/zoom-out.svg}</button>
+                </div>
+                <div id="spacing-controls">
+                    <button aria-label="More Graph Lines" id="plus" class="round-btn">{./res/plus.svg}</button>
+                    <button aria-label="Less Graph Lines" id="minus" class="round-btn">{./res/minus.svg}</button>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
+<section id="preferences-box">
+    <form name="preferences" class="form">
+        <input type="number" min="0" max="20" name="graphLines" value="6" id="graph-lines"/>
+        <label for="graph-lines">Number of lines to show in the graph</label>
+    </form>
+</section>
+
 <!--suppress HtmlUnknownTarget -->
-<script src="./index.js">
-    // const src = require("./nn");
-</script>
+<script src="./index.js"></script>
 </body>
 </html>

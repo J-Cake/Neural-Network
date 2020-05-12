@@ -3,15 +3,85 @@ import * as $ from 'jquery';
 import displayNetwork from "./NeuralNet";
 import displayErrorGraph from "./error";
 import StateManager from "./stateManager";
-import globState, {defaults} from "./globState";
+import globState from "./globState";
 import workerChannel, {state} from "./msgChannel";
 import MockNetwork from "./mockNetwork";
+import trainingData from "../nn/trainingData";
+import initPreferences from "./ui";
+import {fill} from '../nn/utils';
+import initTraining from "../worker/initTraining";
+import exampleFn, {addExample} from "./addExamplePrompt";
 
-window.addEventListener("load", function () {
-    const stateManager: StateManager<globState> = new StateManager<globState>(defaults);
+window.addEventListener("load", async function () {
+    const stateManager: StateManager<globState> = new StateManager<globState>({
+        neuronConfig: [3, 4, 1],
+        learningRate: 0.3,
+        trainingSubset: 0,
+        trainingCycles: 1e4,
+        trainingSet: trainingData,
+        targetError: 3.5e-3,
+        error: [],
+        initSeed: 'a',
+        userFunctions: {
+            Sigmoid: {
+                f: `x => 1 / (1 + Math.E ** -x)`,
+                fPrime: `x => x * (1 - x)`
+            }
+        },
+        activationFunctions: fill(2, () => 'Sigmoid'),
+        graphColour: {
+            red: 0,
+            green: 120,
+            blue: 215
+        },
+        addExample: addExample,
+        onTrainFnc: async function () {
+            const state = stateManager.setState({
+                graphColour: {
+                    red: 0,
+                    green: 180,
+                    blue: 100
+                }
+            });
+
+            console.log("TRAINING SET", state.trainingSet);
+
+            if (!state.isTraining)
+                state.msgChannel<number>('initTraining', {
+                    trainingSet: state.trainingSet,
+                    trainingCycles: state.trainingCycles,
+                    targetError: state.targetError
+                }).then((data: number) => {
+                    stateManager.setState(prev => ({
+                        graphColour: {
+                            red: 0,
+                            green: 120,
+                            blue: 215
+                        }
+                    }))
+                });
+        }
+    });
+
+    initPreferences(stateManager);
+    displayNetwork(stateManager, $("#network-visualiser"));
+    displayErrorGraph(stateManager, $("#error-graph"));
 
     stateManager.setState(function (): Partial<globState> {
         const worker: Worker = new Worker('./worker.js');
+
+        const trainingUpdate = function (data: { error: number[], network: MockNetwork, minError: number, maxError: number, training: boolean }) {
+            console.log("training", data.training);
+            console.log('min:', data.minError, 'max:', data.maxError);
+
+            stateManager.setState(prev => ({
+                network: data.network || prev.network,
+                error: data.error || prev.error,
+                minError: data.minError,
+                maxError: data.maxError,
+                isTraining: data.training
+            }));
+        };
 
         const msgChannelStateMgr: StateManager<state> = new StateManager<state>({
             msgTarget: worker.postMessage.bind(worker),
@@ -19,12 +89,9 @@ window.addEventListener("load", function () {
             functions: [],
             requests: [],
             requestHandlers: {
-                trainingUpdate(data: {error: number, network: MockNetwork}) {
-                    stateManager.setState(prev => ({
-                        network: data.network,
-                        error: [...prev.error, data.error]
-                    }))
-                }
+                trainingUpdate: trainingUpdate,
+                trainingStart: trainingUpdate,
+                trainingStop: trainingUpdate
             }
         });
 
@@ -48,32 +115,33 @@ window.addEventListener("load", function () {
         };
     });
 
-    const {msgChannel, neuronConfig, learningRate, trainingSubset} = stateManager.setState();
-
-    if (msgChannel)
-        msgChannel<MockNetwork>('createNetwork', {
-            neuronConfig: neuronConfig,
-            learningRate: learningRate,
-            trainingSubset: trainingSubset
-        }).then((network: MockNetwork) => {
-            stateManager.setState({
-                network: network
-            });
+    function create(): void {
+        const {msgChannel, neuronConfig, learningRate, trainingSubset, userFunctions, activationFunctions, initSeed} = stateManager.setState({
+            error: []
         });
+
+        if (msgChannel)
+            msgChannel<MockNetwork>('createNetwork', {
+                neuronConfig: neuronConfig,
+                learningRate: learningRate,
+                trainingSubset: trainingSubset,
+                userFunctions: userFunctions,
+                activationFunctions: activationFunctions,
+                initSeed: initSeed,
+            }).then((network: MockNetwork) => {
+                console.log(network);
+                stateManager.setState({
+                    network: network,
+                    error: [],
+                });
+            });
+
+        stateManager.on('preferenceChange', create);
+    }
+
+    create();
+    exampleFn(stateManager);
 
     const trainBtn = $('#train-btn');
-    trainBtn.on('click', async function () {
-        const state = stateManager.setState();
-
-        msgChannel<void>('initTraining', {
-            trainingSet: state.trainingSet,
-            trainingCycles: state.trainingCycles,
-            targetError: state.targetError
-        }).then(function() {
-            console.log('Initiating Training');
-        });
-    });
-
-    displayNetwork(stateManager, $("#network-visualiser"));
-    displayErrorGraph(stateManager, $("#error-graph"));
+    trainBtn.on('click', stateManager.setState().onTrainFnc);
 });

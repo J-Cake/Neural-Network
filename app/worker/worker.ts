@@ -6,6 +6,8 @@ import State from "./globState";
 
 const stateManager: StateManager<State> = new StateManager<State>({
     targetError: Infinity,
+    error: [],
+    lastUpdate: Date.now()
 });
 
 const msgStateMgr: StateManager<state> = new StateManager<state>({
@@ -16,13 +18,13 @@ const msgStateMgr: StateManager<state> = new StateManager<state>({
     requests: [],
     requestHandlers: {
         createNetwork: createNetwork(stateManager),
-        initTrain: initTraining(stateManager)
+        initTraining: initTraining(stateManager)
     },
 });
 
 stateManager.setState({
     msgChannel: msgChannel(msgStateMgr) // don't forget to initialise the message channel.
-})
+});
 
 onmessage = function (msg: MessageEvent) {
     if (msg.data && 'fId' in msg.data)

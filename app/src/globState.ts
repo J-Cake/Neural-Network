@@ -1,14 +1,12 @@
 import {example} from "../nn/lib";
-import {fill, sig, sigp} from "../nn/utils";
 import MockNetwork from './mockNetwork';
 
-import trainingData from "../nn/trainingData";
 import StateManager from "./stateManager";
 import {channelFn, state} from "./msgChannel";
+import {funcStrings} from "../worker/convertToFunctions";
 
 export default interface State {
     neuronConfig: number[],
-    activationConfig: { f: (x: number) => number, fPrime: (x: number) => number }[],
     learningRate: number,
     trainingCycles: number,
     trainingSet: example[],
@@ -21,16 +19,22 @@ export default interface State {
     procName: string,
     msgStateMgr: StateManager<state>
     msgChannel: channelFn,
-    error: number[]
-};
-
-export const defaults: Partial<State> = {
-    neuronConfig: [3, 4, 2],
-    activationConfig: fill(2, () => ({f: sig, fPrime: sigp})),
-    learningRate: 0.3,
-    trainingSubset: 0,
-    trainingCycles: 1e4,
-    trainingSet: trainingData,
-    targetError: Infinity,
-    error: []
+    error: number[],
+    errorScrollLevel: number,
+    minError: number,
+    maxError: number,
+    userFunctions: funcStrings,
+    activationFunctions: string[],
+    graphIntervals: number,
+    errorZoomLevel: number,
+    initSeed: string,
+    isTraining: boolean,
+    onTrainFnc: () => Promise<void>,
+    exampleFn: (stateManager: StateManager<State>) => void,
+    addExample: (container: JQuery, stateManager: StateManager<State>, preload?: example) => Promise<example>,
+    graphColour: {
+        red: number,
+        green: number,
+        blue: number
+    }
 };

@@ -13,10 +13,18 @@ export default class Network {
 
     lastKnownError: number;
 
-    constructor(sizes: number[], activationFunctions: activations[], learningRate: number = 0.3, trainingSubset: number = 0) {
+    seed: string;
+    random: sr.prng;
+
+    constructor(sizes: number[], activationFunctions: activations[], learningRate: number = 0.3, trainingSubset: number = 0, seed?: string) {
+        this.seed = seed || fill(Math.floor((Math.random() * 10) + 5), () => (a => a[Math.floor(Math.random() * a.length)])('abcedfghijklmonpqrstuvwxyzABCDEFGHIJKLMONPQRSTUVXYZ0123456789')).join('');
+
+        console.log('Initialising from number seed:', this.seed, 'provided seed:', seed || '<none>');
+        this.random = sr(this.seed);
+
         if (sizes.length === activationFunctions.length + 1) {
             this.layers = fill(sizes.length, (a: number, length: number, prev: Layer) => {
-                return new Layer(sizes[a - 1], sizes[a], activationFunctions[a - 1], prev, a);
+                return new Layer(sizes[a - 1], sizes[a], activationFunctions[a - 1], this.random, prev, a);
             });
         } else
             throw new SyntaxError(`There must be exactly one activation function per layer. ${sizes.length - 1} are required.`);
@@ -69,7 +77,7 @@ export default class Network {
     }
 
     private backProp(trainingSet: example[], learningRate: number, repeat: number): void {
-        for (const example of Network.getSubset(trainingSet, this.trainingSubset)) {
+        for (const example of Network.getSubset(trainingSet, this.trainingSubset, this.random)) {
             let errors: number[] = this.getError(example); // this step already forward propagates
 
             if (Network.containsNaN(errors))
@@ -99,7 +107,7 @@ export default class Network {
             layer.applyChanges();
     }
 
-    private static getSubset(trainingSet: example[], subset: number = 0): example[] {
+    private static getSubset(trainingSet: example[], subset: number = 0, prng: sr.prng): example[] {
         let examples: example[] = [];
 
         if (subset <= 0)
@@ -107,7 +115,7 @@ export default class Network {
         else
             for (let i = 0; i < subset; i++)
                 if (trainingSet.length > 0)
-                    examples.push(trainingSet[Math.floor(Network.random() * trainingSet.length)]);
+                    examples.push(trainingSet[Math.floor(prng() * trainingSet.length)]);
 
         return examples;
     }
@@ -116,7 +124,7 @@ export default class Network {
         // let avgError: number = (x => x.reduce((a, i) => a + i) / x.length)(trainingSet.map(i => (x => x.reduce((a, i) => a + i) / x.length)(this.getError(i))));
         // ^ One Liner to get the average error across the entire training set
 
-        const examples: example[] = Network.getSubset(trainingSet, this.trainingSubset)
+        const examples: example[] = Network.getSubset(trainingSet, this.trainingSubset, this.random)
 
         let avgErr: number = 0;
 
@@ -130,8 +138,6 @@ export default class Network {
         return this.lastKnownError = avgErr / (examples[0].expected.length * examples.length);
 
     }
-
-    static random: sr.prng = sr('a');
 }
 
 export class Layer {
@@ -153,13 +159,13 @@ export class Layer {
     isInputLayer: boolean;
     layerIndex: number;
 
-    constructor(inputNeurons: number, outputNeurons: number, activationFunction: activations, prevLayer?: Layer, layerIndex: number = 0) {
+    constructor(inputNeurons: number, outputNeurons: number, activationFunction: activations, prng: sr.prng, prevLayer?: Layer, layerIndex: number = 0) {
         if (layerIndex !== 0) {
             this.activation = activationFunction.f;
             this.activationPrime = activationFunction.fPrime;
 
-            this.weights = fill(outputNeurons, () => fill(inputNeurons, () => 2 * Network.random() - 1));
-            this.biases = fill(outputNeurons, () => Network.random());
+            this.weights = fill(outputNeurons, () => fill(inputNeurons, () => 2 * prng() - 1));
+            this.biases = fill(outputNeurons, () => prng());
 
             this.weightChange = fill(outputNeurons, () => fill(inputNeurons, () => 0));
             this.biasChange = fill(outputNeurons, () => 0);

@@ -1,11 +1,97 @@
+'use strict';
 const fs = require('fs');
+const path = require('path');
+const through = require('through2');
 
-const {series, src, dest} = require('gulp');
-// const sourcemaps = require('gulp-sourcemaps');
+const {series, parallel, src, dest} = require('gulp');
 
 const browserify = require('gulp-browserify');
 
-exports.default = series(async function prepareOutput() {
+function htmlTransform() {
+    let bracketCount = 0;
+    let isEscaped = false;
+    let prevOut = [];
+    let bracketContents = [];
+
+    return through.obj(function (input, encoding, callback) {
+        const stream = through();
+
+        function transform(src) {
+            let body = prevOut;
+
+            for (const char of src) {
+                if (char === '\\')
+                    isEscaped = true;
+                else {
+                    if (isEscaped) {
+                        stream.write(char);
+                        isEscaped = false;
+                    } else if (char === '{') {
+                        bracketCount++;
+                        bracketContents.push('{');
+                    } else if (char === '}') {
+                        bracketCount--;
+                        bracketContents.push('}');
+
+                        // console.log('Bracket Content', bracketContents.join(''));
+
+                        if (bracketCount === 0) {
+                            const fileName = path.resolve(input.history[0], '../', ((bracketContents.join('').match(/{.+}$/) || [])[0] || '').slice(1, -1));
+
+                            if (fs.existsSync(fileName))
+                                stream.write(fs.readFileSync(fileName, encoding));
+                            else
+                                stream.write(`The File "${fileName}" doesn't exist`);
+                            bracketContents = [];
+                        } else if (bracketCount < 0) {
+                            bracketCount = 0;
+                            stream.write(bracketContents);
+                            bracketContents = [];
+                        }
+                    } else if (bracketCount > 0)
+                        bracketContents.push(char);
+                    else { // Even if characters aren't escaped, they aren't used for anything, so they'll just get appended to the string.
+                        stream.write(char);
+                    }
+                }
+            }
+
+            prevOut = body;
+        }
+
+        if (input.isStream()) {
+            input.contents.on('data', function (data) {
+                transform(data.toString());
+            });
+            input.contents.on('end', () => {
+                stream.write(prevOut.join(''));
+                stream.end();
+                this.push(input);
+                callback();
+            });
+
+            input.contents = stream;
+        } else if (input.isBuffer()) {
+            const output = [];
+
+            stream.on('data', data => output.push(data));
+            stream.on('end', () => {
+                input.contents = Buffer.from(output.join(''), encoding);
+                this.push(input);
+                callback();
+            });
+
+            transform(input.contents.toString());
+            stream.end();
+        } else {
+            throw new TypeError(`Unsupported File Type`);
+        }
+
+        return stream;
+    });
+}
+
+async function prepareOutput() {
     if (!fs.existsSync('./build'))
         fs.mkdirSync('./build');
 
@@ -15,15 +101,30 @@ exports.default = series(async function prepareOutput() {
         });
 
     fs.mkdirSync('./build/final');
-}, series(async function Browserify() {
-    src(['./build/app/src/index.js'])
-        .pipe(browserify({ debug: true }))
-        .pipe(dest('./build/final'));
+}
 
-    src(['./build/app/worker/worker.js'])
-        .pipe(browserify({ debug: true }))
-        .pipe(dest('./build/final'));
-}, async function Copy() {
-    src(['./app/index.html', './app/master.css'])
+async function Browserify() {
+    if (fs.readdirSync('./build/app').length > 0) {
+        src(['./build/app/src/index.js'])
+            .pipe(browserify())
+            .pipe(dest('./build/final'));
+
+        src(['./build/app/worker/worker.js'])
+            .pipe(browserify())
+            .pipe(dest('./build/final'));
+    } else
+        throw new Error('No Typescript output');
+}
+
+async function Copy() {
+    src(['./app/index.html'])
+        .pipe(htmlTransform())
         .pipe(dest('./build/final'))
-}));
+
+    src(['./app/master.css', './app/icon.png'])
+        .pipe(dest('./build/final'))
+}
+
+exports.default = series(prepareOutput, parallel(Browserify, Copy));
+
+exports.htmlify = Copy;

@@ -1,6 +1,10 @@
 {
     "compilerOptions": {
         "target": "es5",
+        "lib": [
+            "ES2019",
+            "dom"
+        ],
         "module": "commonjs",
         "outDir": "./build/app",
         "rootDir": "./app",

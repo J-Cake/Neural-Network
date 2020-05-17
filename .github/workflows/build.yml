@@ -27,4 +27,4 @@ jobs:
       run: |
         npm install
         tsc
-        ./node_modules/.bin/gulp fullBuild
+        ./node_modules/.bin/gulp WebBuild

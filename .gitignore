@@ -1,0 +1,6 @@
+.unused
+.vscode
+dist
+node_modules
+.idea
+app/.out

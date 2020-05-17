@@ -3,7 +3,6 @@
 const fs = require('fs');
 const path = require('path');
 const through = require('through2');
-const {PassThrough} = require('stream');
 
 const {series, parallel, src, dest} = require('gulp');
 
@@ -43,7 +42,7 @@ function htmlTransform(escape = false) {
 
                             if (fs.existsSync(fileName))
                                 stream.write(fs.readFileSync(fileName, encoding));
-                                // stream.write(escape ? fs.readFileSync(fileName, encoding).replace(/</g, '&lt;').replace(/>/g, '7gt;') : fs.readFileSync(fileName, encoding));
+                            // stream.write(escape ? fs.readFileSync(fileName, encoding).replace(/</g, '&lt;').replace(/>/g, '7gt;') : fs.readFileSync(fileName, encoding));
                             else
                                 stream.write(`The File "${fileName}" doesn't exist`);
                             bracketContents = [];
@@ -95,47 +94,53 @@ function htmlTransform(escape = false) {
     });
 }
 
-async function prepareOutput() {
-    if (!fs.existsSync('./build'))
-        fs.mkdirSync('./build');
+function PreBuild() {
+    function ClearPrevBuild(cb) {
+        if (!fs.existsSync('./build'))
+            fs.mkdirSync('./build');
 
-    if (fs.existsSync('./build/final'))
-        fs.rmdirSync('./build/final', {
-            recursive: true
-        });
+        if (fs.existsSync('./build/final'))
+            fs.rmdirSync('./build/final', {
+                recursive: true
+            });
 
-    fs.mkdirSync('./build/final');
-}
+        fs.mkdirSync('./build/final');
 
-async function Browserify() {
-    if (fs.readdirSync('./build/app').length > 0) {
-        src(['./build/app/src/index.js'])
-            .pipe(browserify())
+        cb();
+    }
+
+    const CompileHTML = () => src(['./app/static/index.html'])
+            .pipe(htmlTransform())
             .pipe(dest('./build/final'));
 
-        src(['./build/app/worker/worker.js'])
-            .pipe(browserify())
+    const CopyStaticResources = () => src(['./app/static/*', '!./app/static/index.html'])
             .pipe(dest('./build/final'));
-    } else
-        throw new Error('No Typescript output');
-}
 
-async function Minify() {
-    src(['./build/final/index.js', './build/final/worker.js'])
+    return series(ClearPrevBuild, parallel(CompileHTML, CopyStaticResources));
+}
+function DevBuild() {
+    const App = () => src('./build/app/src/index.js')
+        .pipe(browserify())
+        .pipe(dest('./build/final'));
+    const Worker = () => src('./build/app/worker/worker.js')
+        .pipe(browserify())
+        .pipe(dest('./build/final'));
+
+    return parallel(App, Worker);
+}
+function WebBuild() {
+    const App = () => src('./build/app/src/index.js')
+        .pipe(browserify())
         .pipe(terser())
         .pipe(dest('./build/final'));
+    const Worker = () => src('./build/app/worker/worker.js')
+        .pipe(browserify())
+        .pipe(terser())
+        .pipe(dest('./build/final'));
+
+    return parallel(App, Worker);
 }
 
-async function Copy() {
-    src(['./app/static/*', '!./app/static/index.html'])
-        .pipe(dest('./build/final'));
-
-    src(['./app/static/index.html'])
-        .pipe(htmlTransform())
-        .pipe(dest('./build/final'));
-
-exports.default = series(prepareOutput, parallel(Browserify, Copy));
-
-exports.htmlify = Copy;
-
-exports.fullBuild = series(prepareOutput, Copy, Browserify, Minify);
+exports.DevBuild = series(PreBuild(), DevBuild());
+exports.WebBuild = series(PreBuild(), WebBuild());
+// TODO: Electron Full Build

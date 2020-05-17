@@ -32,8 +32,6 @@
         "gulp-rename": "^2.0.0",
         "gulp-sourcemaps": "^2.6.5",
         "gulp-terser": "^1.2.0",
-        "gulp-uglify": "^3.0.2",
-        "gulp-uglify-es": "^2.0.0",
         "through2": "^3.0.1",
         "typescript": "latest",
         "uglify-es": "^3.3.9"
